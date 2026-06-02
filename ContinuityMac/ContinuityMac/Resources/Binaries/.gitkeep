@@ -1,0 +1,6 @@
+# Place compiled binaries here:
+# - adb        (from: brew install android-platform-tools, then copy /opt/homebrew/bin/adb)
+# - scrcpy     (from: brew install scrcpy, then copy /opt/homebrew/bin/scrcpy)
+# - scrcpy-server  (from: find /opt/homebrew -name scrcpy-server)
+#
+# Run ./scripts/setup.sh to copy these automatically.

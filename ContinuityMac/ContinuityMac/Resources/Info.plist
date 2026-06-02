@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Hide from Dock — menu bar only app -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- App metadata -->
+    <key>CFBundleName</key>
+    <string>Continuity</string>
+    <key>CFBundleDisplayName</key>
+    <string>Continuity Suite</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.continuity.mac</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleExecutable</key>
+    <string>ContinuityMac</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- Minimum macOS version -->
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <!-- Accessibility permission usage description (for CGEvent tap) -->
+    <key>NSAccessibilityUsageDescription</key>
+    <string>Continuity needs Accessibility access to route mouse and keyboard input to your Android device for Cross Control.</string>
+
+    <!-- Network usage description -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Continuity uses your local network to discover and connect to your Android device.</string>
+
+    <!-- Bonjour services -->
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_continuity._tcp</string>
+    </array>
+
+    <!-- System extension (camera) -->
+    <key>NSSystemExtensionUsageDescription</key>
+    <string>Continuity installs a virtual camera extension to use your phone as a webcam in FaceTime, Zoom, and other apps.</string>
+</dict>
+</plist>

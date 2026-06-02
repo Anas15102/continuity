@@ -1,0 +1,46 @@
+# macOS
+.DS_Store
+.DS_Store?
+*.swp
+*.swo
+
+# Xcode
+ContinuityMac/ContinuityMac.xcodeproj/xcuserdata/
+ContinuityMac/ContinuityMac.xcodeproj/project.xcworkspace/xcuserdata/
+ContinuityMac/ContinuityMac.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+*.xcworkspace
+DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.xcbkptlist
+*.xcuserstate
+build/
+
+# Android
+ContinuityAndroid/.gradle/
+ContinuityAndroid/build/
+ContinuityAndroid/app/build/
+ContinuityAndroid/local.properties
+ContinuityAndroid/*.iml
+ContinuityAndroid/.idea/
+*.apk
+*.aab
+
+# Build artifacts
+*.dmg
+*.pkg
+dist/
+
+# Secrets / keys
+*.p12
+*.mobileprovision
+*.keystore
+.env
+secrets/
+
+# Logs
+*.log
