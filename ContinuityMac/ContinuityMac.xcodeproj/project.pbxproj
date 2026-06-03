@@ -26,6 +26,8 @@
 		AA000017 /* AppStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100017 /* AppStreamView.swift */; };
 		AA000018 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100018 /* NotificationsView.swift */; };
 		AA000019 /* CallBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100019 /* CallBannerView.swift */; };
+		AA000020 /* PairingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100020 /* PairingManager.swift */; };
+		AA000021 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100021 /* PairingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +53,8 @@
 		AA100017 /* AppStreamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UI/AppStreamView.swift"; sourceTree = "<group>"; };
 		AA100018 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UI/NotificationsView.swift"; sourceTree = "<group>"; };
 		AA100019 /* CallBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UI/CallBannerView.swift"; sourceTree = "<group>"; };
+		AA100020 /* PairingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Core/PairingManager.swift"; sourceTree = "<group>"; };
+		AA100021 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UI/PairingView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -76,6 +80,8 @@
 				AA100017 /* AppStreamView.swift */,
 				AA100018 /* NotificationsView.swift */,
 				AA100019 /* CallBannerView.swift */,
+				AA100020 /* PairingManager.swift */,
+				AA100021 /* PairingView.swift */,
 				AA300001 /* Info.plist */,
 				AA300002 /* ContinuityMac.entitlements */,
 			);
@@ -175,6 +181,8 @@
 				AA000017 /* AppStreamView.swift in Sources */,
 				AA000018 /* NotificationsView.swift in Sources */,
 				AA000019 /* CallBannerView.swift in Sources */,
+				AA000020 /* PairingManager.swift in Sources */,
+				AA000021 /* PairingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

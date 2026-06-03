@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let wifi            = WifiConnectionManager.shared
     let notifBridge     = NotificationBridge.shared
     let callBridge      = CallBridge.shared
+    let pairing         = PairingManager.shared
 
     // MARK: - Lifecycle
 
@@ -33,7 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Auto-connect to last known device
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            self.clipboard.start()
+            self.pairing.autoConnect()
         }
 
         print("[AppDelegate] Continuity Suite launched — Motorola Edge 50 Pro")
@@ -70,6 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .environmentObject(wifi)
             .environmentObject(notifBridge)
             .environmentObject(callBridge)
+            .environmentObject(pairing)
 
         let pop = NSPopover()
         pop.contentSize = NSSize(width: 320, height: 520)

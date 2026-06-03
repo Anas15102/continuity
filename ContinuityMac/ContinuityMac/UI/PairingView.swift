@@ -104,7 +104,7 @@ struct PairingView: View {
                     }
                     .font(.caption)
                     .buttonStyle(.plain)
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 }
                 .padding()
             }
@@ -191,7 +191,7 @@ struct PairedDevicesView: View {
                 Button(action: { showPairingSheet = true }) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundStyle(.accentColor)
+                        .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.plain)
             }
@@ -234,7 +234,7 @@ struct DeviceRow: View {
         HStack(spacing: 10) {
             Image(systemName: "iphone")
                 .font(.system(size: 14))
-                .foregroundStyle(isActive ? .accentColor : .secondary)
+                .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(device.name)

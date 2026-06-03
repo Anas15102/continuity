@@ -18,6 +18,7 @@ final class PairingManager: ObservableObject {
     @Published var pairedDevices: [PairedDevice] = []
     @Published var activeDeviceID: UUID? = nil
     @Published var showQRScanner = false
+    @Published var showPairingSheet = false
 
     // MARK: - Persistence key
     private let storageKey = "com.continuity.pairedDevices"

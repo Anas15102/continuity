@@ -191,12 +191,12 @@ object ConnectionManager {
         val latch = java.util.concurrent.CountDownLatch(1)
 
         onPairingRequest?.invoke(macName, macId,
-            accept = {
+            {
                 savePairing(macId, macName)
                 result = true
                 latch.countDown()
             },
-            reject = {
+            {
                 result = false
                 latch.countDown()
             }

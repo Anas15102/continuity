@@ -30,4 +30,15 @@ object QRGenerator {
         val encodedName = java.net.URLEncoder.encode(deviceName, "UTF-8")
         return "continuity://pair?ip=$ip&port=$port&name=$encodedName"
     }
+
+    /** Parse QR from Mac side: continuity://mac-pair?id=UUID&name=MacName */
+    fun parseMacPairUrl(url: String): Pair<String, String>? {
+        return try {
+            val uri = android.net.Uri.parse(url)
+            if (uri.scheme != "continuity" || uri.host != "mac-pair") return null
+            val id = uri.getQueryParameter("id") ?: return null
+            val name = uri.getQueryParameter("name") ?: "Mac"
+            Pair(id, name)
+        } catch (e: Exception) { null }
+    }
 }
