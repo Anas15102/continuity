@@ -207,9 +207,17 @@ final class ClipboardSyncDaemon: ObservableObject {
 
         default:
             guard identityExchanged else { return }
+            var anyJson = json
             let strJson = json.compactMapValues { $0 as? String }
-            NotificationBridge.shared.handleSocketMessage(json: strJson)
-            CallBridge.shared.handleSocketMessage(json: strJson)
+            // Route to appropriate handlers
+            if let type = json["type"] as? String {
+                if type == "call_answered" {
+                    CallBridge.shared.callAnsweredOnPhone()
+                    return
+                }
+            }
+            NotificationBridge.shared.handleSocketMessage(json: anyJson)
+            CallBridge.shared.handleSocketMessage(json: anyJson)
         }
     }
 
@@ -222,6 +230,12 @@ final class ClipboardSyncDaemon: ObservableObject {
         ]) else { return }
         sendRaw(data)
         DispatchQueue.main.async { self.lastSyncedText = text }
+    }
+
+    /// Public method for other subsystems (NotificationBridge, etc.) to send packets
+    func sendRawPacket(_ data: Data) {
+        guard isSocketConnected else { return }
+        sendRaw(data)
     }
 
     private func sendRaw(_ data: Data) {

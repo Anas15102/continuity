@@ -37,6 +37,19 @@ class ContinuityService : Service() {
         ConnectionManager.onPairingRequest = { macName, macId, accept, reject ->
             showPairingNotification(macName, macId, accept, reject)
         }
+
+        // Wire reply from Mac → send SMS/message on Android
+        ConnectionManager.onReply = { to, message, app ->
+            MessageReplyHandler.send(this, to = to, message = message, app = app)
+        }
+        ConnectionManager.onSMSSend = { to, message ->
+            MessageReplyHandler.sendSMS(this, to = to, message = message)
+        }
+
+        // Wire call actions from Mac
+        ConnectionManager.onCallAction = { action ->
+            CallActionHandler.handle(action)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

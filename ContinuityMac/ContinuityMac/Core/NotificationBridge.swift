@@ -2,12 +2,12 @@ import Foundation
 import UserNotifications
 import AppKit
 
-/// Receives notifications, calls, and SMS from the Android companion
-/// and displays them as native macOS notifications.
-/// Also polls via ADB for devices without the companion APK installed.
-final class NotificationBridge: ObservableObject {
+/// Receives notifications and SMS from the Android companion.
+/// Shows native macOS notifications with inline reply support.
+final class NotificationBridge: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationBridge()
-    private init() {
+    override private init() {
+        super.init()
         requestPermission()
     }
 
@@ -15,21 +15,49 @@ final class NotificationBridge: ObservableObject {
 
     @Published var recentNotifications: [PhoneNotification] = []
 
-    // MARK: - Permission
+    // Reply action identifier
+    static let replyActionID    = "CONTINUITY_REPLY"
+    static let dismissActionID  = "CONTINUITY_DISMISS"
+    static let categoryID       = "CONTINUITY_MESSAGE"
+
+    // MARK: - Permission + Setup
 
     private func requestPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            print("[Notifications] Permission granted: \(granted)")
+        let replyAction = UNTextInputNotificationAction(
+            identifier: Self.replyActionID,
+            title: "Reply",
+            options: [],
+            textInputButtonTitle: "Send",
+            textInputPlaceholder: "Type a reply..."
+        )
+        let dismissAction = UNNotificationAction(
+            identifier: Self.dismissActionID,
+            title: "Dismiss",
+            options: [.destructive]
+        )
+        let category = UNNotificationCategory(
+            identifier: Self.categoryID,
+            actions: [replyAction, dismissAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .sound, .badge]
+        ) { granted, _ in
+            print("[Notifications] Permission: \(granted)")
         }
     }
 
     // MARK: - Show Notification
 
-    func showNotification(app: String, title: String, body: String) {
+    func showNotification(app: String, title: String, body: String, replyTo: String? = nil) {
         let appName = friendlyAppName(app)
 
-        // Add to in-app list
-        let notif = PhoneNotification(app: appName, title: title, body: body, time: Date())
+        // Save to in-app list
+        let notif = PhoneNotification(app: appName, title: title, body: body, time: Date(), replyTarget: replyTo)
         DispatchQueue.main.async {
             self.recentNotifications.insert(notif, at: 0)
             if self.recentNotifications.count > 50 {
@@ -37,11 +65,23 @@ final class NotificationBridge: ObservableObject {
             }
         }
 
-        // Show macOS notification
+        // Build macOS notification
         let content = UNMutableNotificationContent()
-        content.title = "\(appName): \(title)"
+        content.title = appName
+        content.subtitle = title
         content.body = body
         content.sound = .default
+
+        // Add reply button for messaging apps
+        if replyTo != nil || isMessagingApp(app) {
+            content.categoryIdentifier = Self.categoryID
+            // Store reply context
+            content.userInfo = [
+                "app": app,
+                "sender": title,
+                "replyTo": replyTo ?? title
+            ]
+        }
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
@@ -52,23 +92,82 @@ final class NotificationBridge: ObservableObject {
     }
 
     func showSMS(sender: String, body: String) {
-        showNotification(app: "com.android.mms", title: sender, body: body)
+        showNotification(app: "com.android.mms", title: sender, body: body, replyTo: sender)
     }
 
-    /// Handle messages routed from ClipboardSyncDaemon socket
-    func handleSocketMessage(json: [String: String]) {
-        switch json["type"] {
+    // MARK: - UNUserNotificationCenterDelegate (reply handler)
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        let app = userInfo["app"] as? String ?? ""
+        let replyTo = userInfo["replyTo"] as? String ?? ""
+
+        switch response.actionIdentifier {
+        case Self.replyActionID:
+            if let textResponse = response as? UNTextInputNotificationResponse {
+                let replyText = textResponse.userText
+                guard !replyText.isEmpty else { break }
+                sendReply(to: replyTo, message: replyText, app: app)
+            }
+        default:
+            break
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    // MARK: - Send Reply to Android
+
+    private func sendReply(to recipient: String, message: String, app: String) {
+        print("[NotificationBridge] Replying to \(recipient): \(message.prefix(40))")
+
+        // Send over TCP socket to Android
+        let payload: [String: Any] = [
+            "type": "reply",
+            "to": recipient,
+            "message": message,
+            "app": app
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        ClipboardSyncDaemon.shared.sendRawPacket(data)
+    }
+
+    // MARK: - Socket Message Handler
+
+    func handleSocketMessage(json: [String: Any]) {
+        guard let type = json["type"] as? String else { return }
+        switch type {
         case "notification":
-            if let app = json["app"], let title = json["title"], let body = json["body"] {
+            if let app = json["app"] as? String,
+               let title = json["title"] as? String,
+               let body = json["body"] as? String {
                 showNotification(app: app, title: title, body: body)
             }
         case "sms":
-            if let sender = json["sender"], let body = json["body"] {
+            if let sender = json["sender"] as? String,
+               let body = json["body"] as? String {
                 showSMS(sender: sender, body: body)
             }
         default:
             break
         }
+    }
+
+    // Legacy string-dict overload
+    func handleSocketMessage(json: [String: String]) {
+        let anyJson = json.reduce(into: [String: Any]()) { $0[$1.key] = $1.value }
+        handleSocketMessage(json: anyJson)
     }
 
     func clearAll() {
@@ -77,10 +176,9 @@ final class NotificationBridge: ObservableObject {
     }
 
     // MARK: - ADB Polling Fallback
-    // Used when companion APK is not installed.
-    // Polls notification shade via ADB dumpsys every 5 seconds.
 
     private var pollTimer: Timer?
+    private var lastSeenNotifKeys = Set<String>()
 
     func startADBPolling() {
         pollTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
@@ -93,45 +191,43 @@ final class NotificationBridge: ObservableObject {
         pollTimer = nil
     }
 
-    private var lastSeenNotifKeys = Set<String>()
-
     private func pollNotificationsViaADB() {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
-
-            // dumpsys notification gives us active notifications
             let output = ADBBridge.shared.shell("dumpsys notification --noredact 2>/dev/null | grep -A3 'pkg='")
             let lines = output.components(separatedBy: "\n")
-
-            var currentPkg = ""
-            var currentTitle = ""
-            var currentText = ""
-
+            var pkg = "", title = "", text = ""
             for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("pkg=") {
-                    // Save previous if complete
-                    if !currentPkg.isEmpty && !currentTitle.isEmpty {
-                        let key = "\(currentPkg):\(currentTitle)"
+                let t = line.trimmingCharacters(in: .whitespaces)
+                if t.hasPrefix("pkg=") {
+                    if !pkg.isEmpty && !title.isEmpty {
+                        let key = "\(pkg):\(title)"
                         if !self.lastSeenNotifKeys.contains(key) {
                             self.lastSeenNotifKeys.insert(key)
-                            self.showNotification(app: currentPkg, title: currentTitle, body: currentText)
+                            self.showNotification(app: pkg, title: title, body: text)
                         }
                     }
-                    currentPkg = trimmed.replacingOccurrences(of: "pkg=", with: "")
-                        .components(separatedBy: " ").first ?? ""
-                    currentTitle = ""
-                    currentText = ""
-                } else if trimmed.hasPrefix("android.title=") {
-                    currentTitle = trimmed.replacingOccurrences(of: "android.title=", with: "")
-                } else if trimmed.hasPrefix("android.text=") {
-                    currentText = trimmed.replacingOccurrences(of: "android.text=", with: "")
+                    pkg = t.replacingOccurrences(of: "pkg=", with: "").components(separatedBy: " ").first ?? ""
+                    title = ""; text = ""
+                } else if t.hasPrefix("android.title=") {
+                    title = t.replacingOccurrences(of: "android.title=", with: "")
+                } else if t.hasPrefix("android.text=") {
+                    text = t.replacingOccurrences(of: "android.text=", with: "")
                 }
             }
         }
     }
 
     // MARK: - Helpers
+
+    private func isMessagingApp(_ packageName: String) -> Bool {
+        let messaging = [
+            "com.whatsapp", "com.whatsapp.w4b", "com.google.android.apps.messaging",
+            "com.android.mms", "com.facebook.orca", "com.telegram.messenger",
+            "org.thoughtcrime.securesms", "com.instagram.android", "com.snapchat.android"
+        ]
+        return messaging.contains(packageName)
+    }
 
     private func friendlyAppName(_ packageName: String) -> String {
         let known: [String: String] = [
@@ -148,9 +244,6 @@ final class NotificationBridge: ObservableObject {
             "com.facebook.katana": "Facebook",
             "com.facebook.orca": "Messenger",
             "com.spotify.music": "Spotify",
-            "com.netflix.mediaclient": "Netflix",
-            "com.google.android.youtube": "YouTube",
-            "com.linkedin.android": "LinkedIn",
             "com.telegram.messenger": "Telegram",
             "org.thoughtcrime.securesms": "Signal",
         ]
@@ -168,4 +261,5 @@ struct PhoneNotification: Identifiable {
     let title: String
     let body: String
     let time: Date
+    var replyTarget: String?
 }

@@ -253,6 +253,9 @@ object ConnectionManager {
                 }
             }
             "ping" -> sendJSON(JSONObject().put("type", "pong"))
+            "call_action" -> handleCallAction(json)
+            "reply" -> handleReply(json)
+            "sms_send" -> handleSMSSend(json)
             else -> Log.d(TAG, "Unknown type: ${json.optString("type")}")
         }
     }
@@ -297,6 +300,37 @@ object ConnectionManager {
 
     fun sendJSON(payload: JSONObject) {
         thread(name = "MacSender") { sendJSONDirect(payload) }
+    }
+
+    // MARK: - Incoming action handlers
+
+    var onCallAction: ((String) -> Unit)? = null
+    var onReply: ((String, String, String) -> Unit)? = null   // (to, message, app)
+    var onSMSSend: ((String, String) -> Unit)? = null         // (to, message)
+
+    private fun handleCallAction(json: JSONObject) {
+        val action = json.optString("action")
+        Log.i(TAG, "Call action from Mac: $action")
+        onCallAction?.invoke(action)
+    }
+
+    private fun handleReply(json: JSONObject) {
+        val to = json.optString("to")
+        val message = json.optString("message")
+        val app = json.optString("app")
+        if (to.isNotEmpty() && message.isNotEmpty()) {
+            Log.i(TAG, "Reply from Mac to $to: ${message.take(40)}")
+            onReply?.invoke(to, message, app)
+        }
+    }
+
+    private fun handleSMSSend(json: JSONObject) {
+        val to = json.optString("to")
+        val message = json.optString("message")
+        if (to.isNotEmpty() && message.isNotEmpty()) {
+            Log.i(TAG, "SMS from Mac to $to")
+            onSMSSend?.invoke(to, message)
+        }
     }
 
     fun sendClipboard(text: String) = sendJSON(
