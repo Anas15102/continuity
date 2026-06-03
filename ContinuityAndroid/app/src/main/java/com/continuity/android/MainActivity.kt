@@ -3,21 +3,21 @@ package com.continuity.android
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import android.graphics.Bitmap
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -26,8 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -205,7 +205,7 @@ fun ContinuityApp(
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF5555).copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = null)
+                    Icon(Icons.Default.Close, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Stop Service", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -268,23 +268,48 @@ fun ConnectionStatusCard(
                 Divider(color = Color.White.copy(alpha = 0.06f))
                 Spacer(modifier = Modifier.height(14.dp))
 
-                Text("Your phone's address", fontSize = 12.sp, color = Color.White.copy(alpha = 0.4f))
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$deviceIp:$port",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Enter this in ContinuityMac to connect",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.4f),
-                    textAlign = TextAlign.Center
-                )
+                if (isMacConnected) {
+                    // Connected — show minimal info
+                    Text("Connected to Mac", fontSize = 13.sp, color = Color(0xFF4CAF50))
+                    Text(deviceIp, fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color.White.copy(alpha = 0.4f))
+                } else {
+                    // Not connected — show QR code for pairing
+                    Text("Scan to pair with Mac",
+                        fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val qrUrl = QRGenerator.pairingUrl(
+                        ip = deviceIp,
+                        port = ConnectionManager.PORT,
+                        deviceName = android.os.Build.MODEL
+                    )
+                    val qrBitmap = remember(qrUrl) { QRGenerator.generate(qrUrl, 400) }
+
+                    androidx.compose.foundation.Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "Pairing QR Code",
+                        modifier = Modifier
+                            .size(180.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "$deviceIp:$port",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Open Continuity on Mac → Pair New Device",
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.4f),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -299,7 +324,7 @@ fun FeatureStatusList(isMacConnected: Boolean) {
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             FeatureStatusRow(
-                icon = Icons.Default.ContentCopy,
+                icon = Icons.Default.List,
                 label = "Clipboard Sync",
                 active = isMacConnected
             )
@@ -309,7 +334,7 @@ fun FeatureStatusList(isMacConnected: Boolean) {
                 active = isMacConnected
             )
             FeatureStatusRow(
-                icon = Icons.Default.Wifi,
+                icon = Icons.Default.Info,
                 label = "mDNS Advertising",
                 active = true
             )
@@ -356,7 +381,7 @@ fun HowToConnectCard(ip: String, port: Int) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "How to connect",
+                "How to pair",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary
@@ -365,8 +390,9 @@ fun HowToConnectCard(ip: String, port: Int) {
             Text(
                 "1. Open ContinuityMac on your Mac\n" +
                 "2. Click the menu bar icon\n" +
-                "3. Enter this phone's IP above\n" +
-                "4. Both devices must be on the same Wi-Fi",
+                "3. Click + next to Devices\n" +
+                "4. Scan the QR code shown above\n" +
+                "5. Done — auto-connects next time",
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 lineHeight = 18.sp

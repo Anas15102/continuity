@@ -31,9 +31,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         notifBridge.startADBPolling()
         callBridge.startCallMonitoring()
 
-        // Pre-fetch app list for app streaming
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            self.mirroring.fetchInstalledApps()
+        // Auto-connect to last known device
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.clipboard.start()
         }
 
         print("[AppDelegate] Continuity Suite launched — Motorola Edge 50 Pro")

@@ -9,10 +9,14 @@ android {
 
     defaultConfig {
         applicationId "com.continuity.android"
-        minSdk 29          // Android 10 — required for virtual display / desktop mode
+        minSdk 29
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
+
+        vectorDrawables {
+            useSupportLibrary true
+        }
     }
 
     buildTypes {
@@ -47,6 +51,12 @@ dependencies {
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.activity:activity-compose:1.8.2'
+
+    // QR code generation
+    implementation 'com.google.zxing:core:3.5.3'
+
+    // TLS certificate generation
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.78.1'
 
     // Core Android
     implementation 'androidx.core:core-ktx:1.12.0'

@@ -28,6 +28,16 @@ final class DeviceDiscovery: ObservableObject {
     private var adbPollTimer: Timer?
     private let serviceType = "_continuity._tcp"
 
+    // MARK: - Manual device (from pairing)
+
+    func setManualDevice(name: String, ip: String) {
+        DispatchQueue.main.async {
+            self.isConnected = true
+            self.connectedDeviceName = name
+            self.deviceIP = ip
+        }
+    }
+
     // MARK: - Start / Stop
 
     func startBrowsing() {

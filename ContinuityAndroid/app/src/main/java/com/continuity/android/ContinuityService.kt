@@ -29,6 +29,14 @@ class ContinuityService : Service() {
         createNotificationChannel()
         mdnsAdvertiser = MdnsAdvertiser(this)
         clipboardReceiver = ClipboardSyncReceiver(this)
+
+        // Init TLS and ConnectionManager with context
+        ConnectionManager.init(this)
+
+        // Wire pairing request to show a notification the user can tap
+        ConnectionManager.onPairingRequest = { macName, macId, accept, reject ->
+            showPairingNotification(macName, macId, accept, reject)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -36,6 +44,20 @@ class ContinuityService : Service() {
             Log.i(TAG, "Stop action received.")
             stopSelf()
             return START_NOT_STICKY
+        }
+
+        if (intent?.action == ACTION_PAIR_ACCEPT) {
+            pendingAccept?.invoke()
+            pendingAccept = null
+            pendingReject = null
+            return START_STICKY
+        }
+
+        if (intent?.action == ACTION_PAIR_REJECT) {
+            pendingReject?.invoke()
+            pendingAccept = null
+            pendingReject = null
+            return START_STICKY
         }
 
         startForeground(NOTIFICATION_ID, buildNotification("Waiting for Mac…"))
@@ -108,5 +130,48 @@ class ContinuityService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.continuity.android.ACTION_STOP"
+        const val ACTION_PAIR_ACCEPT = "com.continuity.android.ACTION_PAIR_ACCEPT"
+        const val ACTION_PAIR_REJECT = "com.continuity.android.ACTION_PAIR_REJECT"
+    }
+
+    // Pending pairing callbacks
+    private var pendingAccept: (() -> Unit)? = null
+    private var pendingReject: (() -> Unit)? = null
+
+    private fun showPairingNotification(
+        macName: String,
+        macId: String,
+        accept: () -> Unit,
+        reject: () -> Unit
+    ) {
+        pendingAccept = accept
+        pendingReject = reject
+
+        val acceptIntent = android.content.Intent(this, ContinuityService::class.java)
+            .apply { action = ACTION_PAIR_ACCEPT }
+        val rejectIntent = android.content.Intent(this, ContinuityService::class.java)
+            .apply { action = ACTION_PAIR_REJECT }
+
+        val acceptPi = android.app.PendingIntent.getService(
+            this, 1, acceptIntent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        val rejectPi = android.app.PendingIntent.getService(
+            this, 2, rejectIntent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Pairing Request")
+            .setContentText("$macName wants to connect")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .addAction(android.R.drawable.ic_menu_send, "Accept", acceptPi)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Reject", rejectPi)
+            .setAutoCancel(true)
+            .build()
+
+        getSystemService(android.app.NotificationManager::class.java)
+            .notify(2002, notification)
     }
 }
