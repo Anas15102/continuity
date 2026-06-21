@@ -32,7 +32,7 @@ First public beta. Android ↔ Mac continuity features:
 - 🔔 Notification + call mirror
 - 🌐 Smart Hotspot
 
-**Setup:** Download DMG → drag to Applications → install Android APK from source.
+**Setup:** Download the DMG for Mac and the APK for Android.
 
 Both devices must be on the same Wi-Fi network.
 
@@ -40,7 +40,8 @@ macOS security warning on first launch: right-click → Open to bypass.
 
 [☕ Buy me a coffee](https://buymeacoffee.com/Anas15102)" \
   --prerelease \
-  "/tmp/ContinuityMac-v0.1-beta.dmg"
+  "/tmp/ContinuityMac-v0.1-beta.dmg" \
+  "ContinuityAndroid/app/build/outputs/apk/debug/app-debug.apk"
 
 echo ""
 echo "✅ Done! Visit: https://github.com/Anas15102/continuity/releases"
