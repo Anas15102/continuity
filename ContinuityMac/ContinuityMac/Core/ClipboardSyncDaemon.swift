@@ -59,7 +59,9 @@ final class ClipboardSyncDaemon: ObservableObject {
             { _, _, completion in completion(true) },
             .main
         )
-        return NWParameters(tls: tlsOptions)
+        let parameters = NWParameters(tls: tlsOptions)
+        parameters.includePeerToPeer = true
+        return parameters
     }
 
     // MARK: - Lifecycle
@@ -170,7 +172,9 @@ final class ClipboardSyncDaemon: ObservableObject {
     private func receiveLoop() {
         connection?.receive(minimumIncompleteLength: 4, maximumLength: 4) { [weak self] data, _, _, error in
             guard let self = self, let data = data, data.count == 4, error == nil else { return }
-            let length = Int(data.withUnsafeBytes { $0.load(as: UInt32.self).bigEndian })
+            let length = Int(data.reduce(UInt32(0)) { partialResult, byte in
+                (partialResult << 8) | UInt32(byte)
+            })
             guard length > 0, length < 4_000_000 else { self.receiveLoop(); return }
 
             self.connection?.receive(minimumIncompleteLength: length, maximumLength: length) { payload, _, _, err in

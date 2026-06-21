@@ -30,6 +30,10 @@
     <key>NSAccessibilityUsageDescription</key>
     <string>Continuity needs Accessibility access to route mouse and keyboard input to your Android device for Cross Control.</string>
 
+    <!-- Camera usage description for QR scanning -->
+    <key>NSCameraUsageDescription</key>
+    <string>Continuity needs camera access to scan the QR code shown on your Android phone during pairing.</string>
+
     <!-- Network usage description -->
     <key>NSLocalNetworkUsageDescription</key>
     <string>Continuity uses your local network to discover and connect to your Android device.</string>

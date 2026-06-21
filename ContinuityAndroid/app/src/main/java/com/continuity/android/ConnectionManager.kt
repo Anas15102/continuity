@@ -39,6 +39,8 @@ object ConnectionManager {
     private var isRunning = false
     private var prefs: SharedPreferences? = null
 
+    data class PairedMac(val id: String, val name: String)
+
     // Callbacks
     var onClipboardReceived: ((String) -> Unit)? = null
     var onMacConnected: (() -> Unit)? = null
@@ -230,6 +232,20 @@ object ConnectionManager {
     fun getPairedMacs(): JSONObject {
         val str = prefs?.getString(PREFS_PAIRED_MACS, "{}") ?: "{}"
         return try { JSONObject(str) } catch (e: Exception) { JSONObject() }
+    }
+
+    fun getPairedMacList(): List<PairedMac> {
+        val paired = getPairedMacs()
+        return paired.keys().asSequence().map { key ->
+            PairedMac(
+                id = key,
+                name = paired.optString(key, "Mac")
+            )
+        }.toList()
+    }
+
+    fun pairMac(macId: String, macName: String) {
+        savePairing(macId, macName)
     }
 
     private fun getDeviceId(): String {

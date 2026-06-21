@@ -11,6 +11,7 @@
 
 - **Repo:** https://github.com/Anas15102/continuity
 - **Status:** Beta v0.1 — core features working, some polish needed
+- **Current direction:** Mac is the pairing source of truth; Android scans the Mac QR code to trust/pair that Mac and then auto-approves future TLS handshakes.
 - **Owner:** Anas15102
 
 ---
@@ -73,14 +74,15 @@ smart/
         └── java/com/continuity/android/
             ├── CallActionHandler.kt       ← Handles answer/decline/hangup from Mac
             ├── ClipboardSyncReceiver.kt   ← Two-way clipboard via ClipboardManager listener
-            ├── ConnectionManager.kt       ← TLS TCP server, identity exchange, pairing
+            ├── ConnectionManager.kt       ← TLS TCP server, identity exchange, trusted Macs
             ├── ContinuityService.kt       ← Foreground service, wires everything together
-            ├── MainActivity.kt            ← UI: shows QR code, connection status
+            ├── MainActivity.kt            ← UI: camera QR scanner, connection status, trusted Macs
+            ├── MacQrScannerView.kt        ← Camera scanner for Mac pairing QR
             ├── MdnsAdvertiser.kt          ← Advertises on local network via NSD
             ├── MessageReplyHandler.kt     ← Routes replies to SMS/WhatsApp/Telegram
             ├── NotificationBridge.kt      ← NotificationListenerService, forwards to Mac
-            ├── QRGenerator.kt             ← ZXing QR code generator for pairing
-            └── TLSManager.kt             ← BouncyCastle self-signed cert generation
+            ├── QRGenerator.kt             ← QR parsing helpers for Mac pairing payloads
+            └── TLSManager.kt              ← BouncyCastle self-signed cert generation
 ```
 
 ---
@@ -92,7 +94,7 @@ Android (TCP TLS Server :9876)
     │
     ├── Advertises via mDNS (_continuity._tcp.)
     ├── Generates self-signed TLS cert on first run (BouncyCastle)
-    ├── Shows QR code with pairing URL: continuity://pair?ip=X&port=9876&name=Device
+    └── Accepts trusted Mac handshakes after Android scans the Mac pairing QR
     │
     ↕  TLS TCP connection
     │
@@ -127,11 +129,11 @@ All packets use a 4-byte big-endian length prefix followed by a JSON payload:
 | `pong` | Android → Mac | (no extra fields) |
 
 ### Pairing Flow
-1. Android runs → shows QR code containing `continuity://pair?ip=X&port=9876&name=Model`
-2. Mac clicks "Pair New Device" → opens QR scanner (PairingView.swift)
-3. QR scanned → PairingManager saves device to UserDefaults
-4. On next launch, Mac auto-connects to all saved devices via PairingManager.autoConnect()
-5. On connect: TLS handshake → identity exchange → if new Mac, Android shows "Accept/Reject" notification
+1. Mac clicks "Pair New Device" → opens QR code in the menu bar pairing sheet
+2. Android taps "Scan QR" and scans the Mac QR code (`continuity://mac-pair?...`)
+3. Android saves that Mac as trusted in `ConnectionManager` preferences
+4. On the next connection attempt, Android auto-approves that Mac during the TLS identity handshake
+5. Mac still saves Android devices locally and auto-connects to remembered IPs on launch
 
 ---
 
@@ -140,7 +142,7 @@ All packets use a 4-byte big-endian length prefix followed by a JSON payload:
 ### ✅ Core Infrastructure
 - TLS-encrypted TCP connection (self-signed certs, trust-on-first-use like KDEConnect)
 - Identity exchange on every connect (device name, capabilities negotiation)
-- Pairing system with QR code (PairingView + QRGenerator)
+- Pairing system with QR code on Mac + camera scanner on Android
 - Pairing confirmation on Android (Accept/Reject notification)
 - Auto-reconnect with 5s backoff
 - Auto-connect to saved devices on launch
@@ -192,6 +194,7 @@ All packets use a 4-byte big-endian length prefix followed by a JSON payload:
 - Dark frosted glass design (NSVisualEffectView)
 - Scrollable content (nothing gets cut off)
 - Quit button (red pill, bottom of popover)
+- Android main screen now focuses on starting the service, scanning the Mac QR, and showing trusted Macs
 
 ### ✅ GitHub
 - Repo live at github.com/Anas15102/continuity
@@ -212,6 +215,11 @@ All packets use a 4-byte big-endian length prefix followed by a JSON payload:
 - **TLSManager** uses BouncyCastle which adds ~3MB to APK — consider switching to Android KeyStore API for cert generation in production
 - **ANSWER_PHONE_CALLS** permission only works on Android 8+ and may require the app to be set as default phone app on some ROMs
 - **MessageReplyHandler** direct SMS send requires SEND_SMS permission which some users may deny — intent fallback opens the messaging app instead
+- **Android QR scanning** now needs camera permission; if permission is denied the scan flow cannot start
+
+### Current Build State
+- Android debug build passes with the scanner-first pairing UI
+- The Android app no longer presents a self-generated pairing QR as the primary flow
 
 ---
 
@@ -255,6 +263,15 @@ xcodebuild -project "ContinuityMac/ContinuityMac.xcodeproj" \
            -scheme ContinuityMac build
 
 # Build DMG
+
+## Recent Work Summary
+
+- Mac pairing now opens the QR scanner from the menu bar pairing action instead of a generic plus-style affordance.
+- Android pairing now scans the Mac QR code, stores trusted Mac IDs, and uses a camera scanner overlay that no longer relies on a dialog-backed preview.
+- Mac camera access crash was fixed by adding `NSCameraUsageDescription` to the macOS Info.plist.
+- Android scanner black-screen issues were reduced by delaying scanner resume until attachment and by removing dialog clipping around the camera preview.
+- Mac network connection issues were traced to an aligned packet read crash and then to IPv6 scope stripping; the packet reader is now safe, and mDNS endpoint resolution preserves the scoped host string.
+- Current build status: Mac and Android debug builds both succeed after the above fixes.
 xcodebuild ... -configuration Release -archivePath /tmp/app.xcarchive archive
 hdiutil create -volname "Continuity" -srcfolder /tmp/dmg-staging -format UDZO Continuity.dmg
 ```
@@ -378,3 +395,17 @@ implementation 'org.bouncycastle:bcpkix-jdk15to18:1.78.1'  // TLS cert generatio
 6. **Don't use ADB for clipboard on Android 10+** — `cmd clipboard get-text` and `cmd clipboard set-text` are blocked/unreliable on modern Android. The companion app's ClipboardManager listener is the only reliable method.
 
 7. **popover `.semitransient` behavior** — the popover must stay as `.semitransient` (not `.transient`) or it closes when the user tries to drag files into the Share Hub drop zone.
+
+---
+
+## Work Done So Far
+
+- Added a Mac camera privacy usage string so QR pairing can open the camera without crashing.
+- Fixed the Mac QR pairing flow so the menu bar pairing action opens the scanner more clearly.
+- Updated Android to scan the Mac QR code, store trusted Macs, and use a scanner overlay instead of showing its own pairing QR.
+- Fixed the Android scanner preview lifecycle so it no longer stays black in the dialog flow.
+- Fixed the Mac connection crash after scanning by making the packet length read alignment-safe.
+- Fixed Mac network resolution by preserving the IPv6 scope in mDNS-discovered endpoints.
+- Kept the Mac and Android debug builds passing after the above changes.
+
+Prepared by GitHub Copilot (GPT-5.4 mini)

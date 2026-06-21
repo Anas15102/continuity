@@ -189,7 +189,7 @@ struct PairedDevicesView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button(action: { showPairingSheet = true }) {
-                    Image(systemName: "plus.circle.fill")
+                    Image(systemName: "qrcode.viewfinder")
                         .font(.system(size: 14))
                         .foregroundStyle(Color.accentColor)
                 }

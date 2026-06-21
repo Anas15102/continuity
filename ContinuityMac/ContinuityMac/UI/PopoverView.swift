@@ -85,7 +85,7 @@ struct PopoverView: View {
                     Text("No Device Connected")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    Text(pairing.pairedDevices.isEmpty ? "Tap + to pair your phone" : "Tap to connect")
+                    Text(pairing.pairedDevices.isEmpty ? "Tap the QR button to pair your phone" : "Tap to connect")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -114,7 +114,7 @@ struct PopoverView: View {
             Button {
                 pairing.showPairingSheet = true
             } label: {
-                Image(systemName: "plus.circle.fill")
+                Image(systemName: "qrcode.viewfinder")
                     .font(.system(size: 20))
                     .foregroundStyle(Color.accentColor)
             }

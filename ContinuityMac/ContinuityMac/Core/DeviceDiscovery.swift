@@ -95,7 +95,9 @@ final class DeviceDiscovery: ObservableObject {
 
     private func resolveIP(name: String, type: String, domain: String) {
         let endpoint = NWEndpoint.service(name: name, type: type, domain: domain, interface: nil)
-        let conn = NWConnection(to: endpoint, using: .tcp)
+        let params = NWParameters.tcp
+        params.includePeerToPeer = true
+        let conn = NWConnection(to: endpoint, using: params)
 
         conn.stateUpdateHandler = { [weak self] state in
             switch state {
@@ -103,7 +105,7 @@ final class DeviceDiscovery: ObservableObject {
                 // Extract resolved IP from the connection path
                 if let innerEndpoint = conn.currentPath?.remoteEndpoint,
                    case .hostPort(let host, _) = innerEndpoint {
-                    let ip = "\(host)".components(separatedBy: "%").first ?? "\(host)"
+                    let ip = "\(host)"
                     DispatchQueue.main.async {
                         self?.deviceIP = ip
                         print("[Discovery] Resolved IP: \(ip)")
